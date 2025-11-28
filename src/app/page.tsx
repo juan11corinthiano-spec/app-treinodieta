@@ -313,10 +313,10 @@ export default function Home() {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold mb-2">
-            Seu Treino e Dieta Personalizados
+            FitPlan
           </CardTitle>
           <CardDescription className="text-blue-100 text-base">
-            Responda 3 perguntas simples e receba um plano completo adaptado para você
+            Responda 3 perguntas simples e receba um plano completo de treino e dieta adaptado para você
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-8">

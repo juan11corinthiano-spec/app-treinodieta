@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Treino e Dieta Personalizados",
-  description: "Crie seu plano de treino e dieta personalizado em minutos",
+  title: "FitPlan - Treino e Dieta Personalizados",
+  description: "Crie seu plano de treino e dieta personalizado em minutos com inteligência artificial",
 };
 
 export default function RootLayout({
