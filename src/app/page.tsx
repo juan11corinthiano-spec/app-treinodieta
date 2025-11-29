@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dumbbell, Utensils, Loader2, ArrowLeft, TrendingUp, Calendar, Target } from "lucide-react";
+import { Dumbbell, Utensils, Loader2, ArrowLeft, TrendingUp, Calendar, Target, LogOut } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 type UserData = {
   age: string;
@@ -61,6 +63,45 @@ export default function Home() {
     goal: "",
   });
   const [plan, setPlan] = useState<GeneratedPlan | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email || "");
+        // Carregar plano salvo se existir
+        loadSavedPlan(user.id);
+      }
+    };
+    getUser();
+  }, []);
+
+  const loadSavedPlan = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data && !error) {
+      setPlan(data.plan_data);
+      setUserData({
+        age: data.age,
+        level: data.level,
+        goal: data.goal
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +116,19 @@ export default function Home() {
 
       const data = await response.json();
       setPlan(data);
+      
+      // Salvar no Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('workout_plans').insert({
+          user_id: user.id,
+          age: userData.age,
+          level: userData.level,
+          goal: userData.goal,
+          plan_data: data
+        });
+      }
+      
       setStep("results");
     } catch (error) {
       console.error("Erro ao gerar plano:", error);
@@ -94,14 +148,23 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <Button
-            variant="ghost"
-            onClick={resetForm}
-            className="mb-6 hover:bg-white/50 dark:hover:bg-gray-800/50"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          <div className="flex justify-between items-center mb-6">
+            <Button
+              variant="ghost"
+              onClick={resetForm}
+              className="hover:bg-white/50 dark:hover:bg-gray-800/50"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 dark:text-gray-400">{userEmail}</span>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
+            </div>
+          </div>
 
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
@@ -304,12 +367,20 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-2xl border-2">
         <CardHeader className="text-center bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg pb-8">
-          <div className="flex justify-center gap-4 mb-4">
-            <div className="bg-white/20 p-3 rounded-full">
-              <Dumbbell className="w-8 h-8" />
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex-1"></div>
+            <div className="flex justify-center gap-4 flex-1">
+              <div className="bg-white/20 p-3 rounded-full">
+                <Dumbbell className="w-8 h-8" />
+              </div>
+              <div className="bg-white/20 p-3 rounded-full">
+                <Utensils className="w-8 h-8" />
+              </div>
             </div>
-            <div className="bg-white/20 p-3 rounded-full">
-              <Utensils className="w-8 h-8" />
+            <div className="flex-1 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/20">
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
           </div>
           <CardTitle className="text-3xl font-bold mb-2">
